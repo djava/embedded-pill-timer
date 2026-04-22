@@ -3,10 +3,14 @@
 #include "freertos/task.h"
 #include "esp_log.h"
 
-#include "i2c_bus.h"
+#include "driver/i2c_master.h"
 #include "pcf8563.h"
 #include "u8g2.h"
 #include "u8g2_esp32_hal.h"
+
+// XIAO ESP32-C3 default I2C pins: D4=SDA=GPIO6, D5=SCL=GPIO7
+#define I2C_SDA_GPIO 6
+#define I2C_SCL_GPIO 7
 
 i2c_master_bus_handle_t i2c_bus;
 pcf8563_t rtc_peripheral;
