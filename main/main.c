@@ -1,29 +1,30 @@
-#include <stdbool.h>
-
+#include <stdio.h>
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
-#include "driver/gpio.h"
 #include "esp_log.h"
 
-static const char *TAG = "blink";
+#include "i2c_bus.h"
+#include "pcf8563.h"
+#include "u8g2.h"
+#include "u8g2_esp32_hal.h"
 
-#define BLINK_GPIO GPIO_NUM_8
-
-static void blink_task(void *arg)
-{
-    gpio_reset_pin(BLINK_GPIO);
-    gpio_set_direction(BLINK_GPIO, GPIO_MODE_OUTPUT);
-
-    bool level = false;
-    while (1) {
-        gpio_set_level(BLINK_GPIO, level);
-        level = !level;
-        vTaskDelay(pdMS_TO_TICKS(500));
-    }
-}
+i2c_master_bus_handle_t i2c_bus;
+pcf8563_t rtc_peripheral;
+static u8g2_t u8g2;
 
 void app_main(void)
 {
-    ESP_LOGI(TAG, "starting blink task");
-    xTaskCreate(blink_task, "blink", 2048, NULL, 5, NULL);
+    i2c_bus = NULL;
+    const i2c_master_bus_config_t cfg = {
+        .clk_source = I2C_CLK_SRC_DEFAULT,
+        .i2c_port = I2C_NUM_0,
+        .sda_io_num = I2C_SDA_GPIO,
+        .scl_io_num = I2C_SCL_GPIO,
+        .glitch_ignore_cnt = 7,
+        .flags.enable_internal_pullup = true,
+    };
+    ESP_ERROR_CHECK(i2c_new_master_bus(&cfg, &i2c_bus));
+
+    pcf8563_init(&rtc_peripheral, i2c_bus);
+    u8g2_esp32_init_ssd1306_i2c(&u8g2, i2c_bus);
 }
