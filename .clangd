@@ -1,0 +1,15 @@
+CompileFlags:
+    CompilationDatabase: build
+    Remove:
+        - -march=*
+        - -mabi=*
+        - -mcpu=*
+        - -fno-shrink-wrap
+        - -fstrict-volatile-bitfields
+        - -fno-tree-switch-conversion
+        - -fno-jump-tables
+        - -fmacro-prefix-map=*
+    Add:
+        - --target=riscv32-esp-elf
+        - -D__riscv
+        - -D__riscv_xlen=32
