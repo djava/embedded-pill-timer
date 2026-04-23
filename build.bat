@@ -1,10 +1,12 @@
 @echo off
 set MSYSTEM=
 pushd "%~dp0"
-call C:\Users\LEORIE~1\esp\esp-idf\export.bat
+call C:\Users\LEORIE~1\esp\esp-idf\export.bat >nul
 if errorlevel 1 exit /b 1
-idf.py set-target esp32c3
-if errorlevel 1 exit /b 1
+if not exist sdkconfig (
+    idf.py set-target esp32c3
+    if errorlevel 1 exit /b 1
+)
 idf.py build
 set EC=%ERRORLEVEL%
 popd

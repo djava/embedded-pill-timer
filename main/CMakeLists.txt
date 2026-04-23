@@ -1,5 +1,7 @@
 idf_component_register(
-    SRCS "main.c" "pcf8563.c"
+    SRCS "main.c" "pcf8563.c" "display.c" "rtc.c"
     INCLUDE_DIRS "."
     REQUIRES esp_driver_i2c u8g2
 )
+
+target_compile_options(${COMPONENT_LIB} PRIVATE -std=gnu2x)
