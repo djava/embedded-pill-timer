@@ -1,5 +1,6 @@
 #ifndef DEFINES_H
 #define DEFINES_H
+#include "defines.h"
 #include "driver/i2c_types.h"
 #include "pcf8563.h"
 #include "u8g2.h"
@@ -20,7 +21,11 @@ typedef struct {
 #define NUM_PILL_DISPENSERS (2)
 #define NUM_PILL_TIMERS (8)
 
-typedef uint8_t dispenser_idx_t;
+typedef enum {
+    PILL_DISPENSER_IDX_INVALID,
+    PILL_DISPENSER_IDX_A,
+    PILL_DISPENSER_IDX_B,
+} DispenserIdx_t;
 
 extern i2c_master_bus_handle_t i2c_bus;
 extern u8g2_t u8g2;
@@ -29,7 +34,20 @@ extern u8g2_t u8g2;
 #define TASK_PRIORITY_MED  (ESP_TASK_PRIO_MAX - 10)
 #define TASK_PRIORITY_LOW  (ESP_TASK_PRIO_MAX - 15)
 
-#define DISPLAY_WIDTH_PX (128)
+#define DISPLAY_WIDTH_PX  (128)
 #define DISPLAY_HEIGHT_PX (64)
+
+#define GPIO_PIN_DISPENSER_A      (4)
+#define GPIO_PIN_DISPENSER_B      (10)
+
+const gpio_num_t DISPENSER_TO_GPIO_PIN[] = {
+    [PILL_DISPENSER_IDX_INVALID] = GPIO_NUM_NC,
+    [PILL_DISPENSER_IDX_A] = GPIO_PIN_DISPENSER_A,
+    [PILL_DISPENSER_IDX_B] = GPIO_PIN_DISPENSER_B,
+};
+
+#define GPIO_PIN_MENU_BUTTON_UP   (20)
+#define GPIO_PIN_MENU_BUTTON_DOWN (21)
+#define GPIO_PIN_MENU_BUTTON_OK   (9)
 
 #endif

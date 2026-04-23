@@ -11,7 +11,7 @@ typedef enum {
 typedef struct {
     bool active;
     PillTimerMode_t mode;
-    dispenser_idx_t dispenser_idx;
+    DispenserIdx_t dispenser_idx;
     bool ringing;
 
     union {
@@ -28,7 +28,5 @@ typedef struct {
         } absolute;
     };
 } PillTimer_t;
-
-extern PillTimer_t pill_timers[NUM_PILL_TIMERS];
 
 #endif
