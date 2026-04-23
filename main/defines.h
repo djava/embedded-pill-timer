@@ -20,6 +20,7 @@ typedef struct {
 
 #define NUM_PILL_DISPENSERS (2)
 #define NUM_PILL_TIMERS (8)
+#define PILL_TIMER_TIMEOUT_DURATION_MS (30000)
 
 typedef enum {
     PILL_DISPENSER_IDX_INVALID,

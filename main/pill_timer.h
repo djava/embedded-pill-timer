@@ -13,6 +13,7 @@ typedef struct {
     PillTimerMode_t mode;
     DispenserIdx_t dispenser_idx;
     bool ringing;
+    TimerHandle_t timeout_timer_handle;
 
     union {
         struct {
