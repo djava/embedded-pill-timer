@@ -62,7 +62,7 @@ void tick_display(void) {
 static void display_draw_mode_clock(void) {
     static char time_fmt_buf[32];
 
-    const display_time_in_day_t time = rtc_get_display_time_of_day();
+    const display_time_in_day_t time = rtc_get_display_time_in_day();
     snprintf(time_fmt_buf, sizeof(time_fmt_buf), "%02d:%02d:%02d", time.hours, time.mins, time.secs);
 
     u8g2_ClearBuffer(&u8g2);

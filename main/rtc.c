@@ -25,20 +25,34 @@ void rtc_hw_init(void) {
     }
 }
 
-#define MS_IN_SECOND (1000)
-#define MS_IN_MINUTE (60 * MS_IN_SECOND)
-#define MS_IN_HOUR (60 * MS_IN_MINUTE)
-
-display_time_in_day_t rtc_get_display_time_of_day(void) {
+display_time_in_day_t rtc_get_display_time_in_day(void) {
     bool clock_invalid;
     pcf8563_time_t pcf_time;
-
+    
     ESP_ERROR_CHECK(pcf8563_get_time(&pcf8563, &pcf_time, &clock_invalid));
-
+    
     const display_time_in_day_t time = {
         .hours = pcf_time.hour,
         .mins = pcf_time.min,
         .secs = pcf_time.sec
     };
+    return time;
+}
+
+#define MS_IN_SECOND (1000)
+#define MS_IN_MINUTE (60 * MS_IN_SECOND)
+#define MS_IN_HOUR (60 * MS_IN_MINUTE)
+
+time_in_day_ms_t rtc_get_time_in_day_ms(void) {
+    bool clock_invalid;
+    pcf8563_time_t pcf_time;
+
+    ESP_ERROR_CHECK(pcf8563_get_time(&pcf8563, &pcf_time, &clock_invalid));
+
+    const time_in_day_ms_t time =
+        MS_IN_HOUR * pcf_time.hour +
+        MS_IN_MINUTE * pcf_time.min +
+        MS_IN_SECOND * pcf_time.sec;
+
     return time;
 }

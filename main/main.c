@@ -21,8 +21,6 @@
 i2c_master_bus_handle_t i2c_bus;
 u8g2_t u8g2;
 
-PillTimer_t pill_timers[NUM_PILL_TIMERS];
-
 void app_main(void) {
     i2c_bus = NULL;
     const i2c_master_bus_config_t cfg = {
