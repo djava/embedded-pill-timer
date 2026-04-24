@@ -12,7 +12,7 @@
 
 #define DISPLAY_UPDATE_FREQ_MS (33)
 
-DisplayMode_t display_mode;
+_Atomic(DisplayMode_t) display_mode;
 SemaphoreHandle_t display_mutex;
 
 static TaskHandle_t display_task_handle;
@@ -44,7 +44,8 @@ static void display_task(void*) {
     while (true) {
         xSemaphoreTake(display_mutex, portMAX_DELAY);
 
-        switch (display_mode) {
+        const DisplayMode_t mode = display_mode;
+        switch (mode) {
             case DISPLAY_MODE_CLOCK: 
                 display_draw_mode_clock();
                 break;

@@ -1,6 +1,5 @@
 #ifndef DEFINES_H
 #define DEFINES_H
-#include "defines.h"
 #include "driver/i2c_types.h"
 #include "pcf8563.h"
 #include "u8g2.h"
@@ -23,7 +22,7 @@ typedef struct {
 #define PILL_TIMER_TIMEOUT_DURATION_MS (30000)
 
 typedef enum {
-    PILL_DISPENSER_IDX_INVALID,
+    PILL_DISPENSER_IDX_INVALID = 0,
     PILL_DISPENSER_IDX_A,
     PILL_DISPENSER_IDX_B,
 } DispenserIdx_t;
@@ -50,5 +49,11 @@ extern const gpio_num_t DISPENSER_TO_GPIO_PIN[3];
 #define MS_IN_SECOND (1000)
 #define MS_IN_MINUTE (60 * MS_IN_SECOND)
 #define MS_IN_HOUR (60 * MS_IN_MINUTE)
+
+#define REL_INTERVAL_CONFIG_INTERVAL_MS (15 * MS_IN_MINUTE)
+#define REL_INTERVAL_CONFIG_MAX_MS (20 * MS_IN_HOUR)
+#define REL_NUM_PER_DAY_CONFIG_MAX (32)
+#define ABS_TIME_CONFIG_INTERVAL_MS (5 * MS_IN_MINUTE)
+#define ABS_TIME_CONFIG_MAX_MS (23 * MS_IN_HOUR + 59 * MS_IN_MINUTE)
 
 #endif

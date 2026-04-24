@@ -105,6 +105,8 @@ void pill_timer_set_absolute(size_t timer, DispenserIdx_t disp, time_in_day_ms_t
 
     pill_timers[timer].absolute.today_timer_happened = false;
 
+    // TODO: Save to NVM
+
     xSemaphoreGive(pill_timer_mutex);
 }
 
@@ -117,10 +119,12 @@ void pill_timer_set_relative(size_t timer, DispenserIdx_t disp, duration_ms_t in
     pill_timers[timer].mode = PILL_TIMER_MODE_RELATIVE;
 
     pill_timers[timer].relative.num_per_day = num_per_day;
-    pill_timers[timer].relative.time_between = interval;
+    pill_timers[timer].relative.interval = interval;
 
     pill_timers[timer].relative.today_num_times_rang = 0;
     pill_timers[timer].relative.today_time_last_rang = UINT32_MAX;
+
+    // TODO: Save to NVM
 
     xSemaphoreGive(pill_timer_mutex);
 }
@@ -131,6 +135,8 @@ void pill_timer_disable(size_t timer) {
     pill_timers[timer].active = false;
     pill_timers[timer].ringing = false;
     pill_timers[timer].dispenser_idx = PILL_DISPENSER_IDX_INVALID;
+
+    // TODO: Save to NVM
 
     xSemaphoreGive(pill_timer_mutex);
 }
@@ -152,7 +158,7 @@ duration_ms_t pill_timer_get_next_to_ring(PillTimer_t** out_pt) {
         } else if (pt->mode == PILL_TIMER_MODE_RELATIVE) {
             if (pt->relative.today_num_times_rang < pt->relative.num_per_day) {
                 const duration_ms_t time_since = current_time - pt->relative.today_time_last_rang;
-                time_until = pt->relative.time_between - time_since;
+                time_until = pt->relative.interval - time_since;
             }
         }
 
@@ -281,7 +287,7 @@ static bool is_timer_up(PillTimer_t *pt) {
                 const time_in_day_ms_t time_since_last =
                     current_time - pt->relative.today_time_last_rang;
 
-                if (time_since_last > pt->relative.time_between) {
+                if (time_since_last > pt->relative.interval) {
                     return true;
                 }
             }

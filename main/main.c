@@ -14,6 +14,7 @@
 #include "display.h"
 #include "rtc.h"
 #include "pill_timer_mgr.h"
+#include "menus.h"
 
 // ESP32-C3 default I2C pins: D4=SDA=GPIO6, D5=SCL=GPIO7
 #define I2C_SDA_GPIO 6
@@ -44,6 +45,7 @@ void app_main(void) {
     rtc_hw_init();
     display_init();
     pill_timer_mgr_init();
+    menus_init();
 
     while (true) {
         vTaskDelay(portMAX_DELAY);

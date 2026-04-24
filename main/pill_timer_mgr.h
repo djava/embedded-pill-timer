@@ -17,7 +17,7 @@ typedef struct {
 
     union {
         struct {
-            duration_ms_t time_between;
+            duration_ms_t interval;
             uint8_t num_per_day;
 
             time_in_day_ms_t today_time_last_rang;

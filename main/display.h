@@ -9,7 +9,7 @@ typedef enum {
     DISPLAY_MODE_RINGING
 } DisplayMode_t;
 
-extern DisplayMode_t display_mode;
+extern _Atomic(DisplayMode_t) display_mode;
 extern SemaphoreHandle_t display_mutex;
 
 void display_init(void);
