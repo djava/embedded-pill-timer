@@ -92,6 +92,8 @@ static void display_draw_mode_clock(void) {
         snprintf(str_buf, sizeof(str_buf), "Next: None");
     }
 
+    u8g2_DrawHLine(&u8g2, (DISPLAY_WIDTH_PX - str_width) / 2, 35, str_width);
+
     u8g2_SetFont(&u8g2, u8g2_font_7x13_mr);
 
     str_width = u8g2_GetStrWidth(&u8g2, str_buf);
