@@ -1,5 +1,5 @@
-#ifndef PILL_TIMER_H
-#define PILL_TIMER_H
+#ifndef PILL_TIMER_MGR_H
+#define PILL_TIMER_MGR_H
 
 #include "defines.h"
 
@@ -29,5 +29,12 @@ typedef struct {
         } absolute;
     };
 } PillTimer_t;
+
+void pill_timer_mgr_init(void);
+void pill_timer_set_absolute(size_t timer, DispenserIdx_t disp, time_in_day_ms_t time_in_day);
+void pill_timer_set_relative(size_t timer, DispenserIdx_t disp, duration_ms_t interval, uint8_t num_per_day);
+void pill_timer_disable(size_t timer);
+
+void pill_timer_get_next_to_ring(void);
 
 #endif

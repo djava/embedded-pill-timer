@@ -37,6 +37,7 @@ void app_main(void) {
 
     rtc_hw_init();
     display_init();
+    pill_timer_init();
 
     while (true) {
         vTaskDelay(portMAX_DELAY);

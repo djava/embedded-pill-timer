@@ -1,11 +1,11 @@
-#include "freertos/freertos.h"
+#include "freertos/FreeRTOS.h"
 #include "freertos/projdefs.h"
 #include "freertos/queue.h"
 #include "driver/gpio.h"
 
 #include "defines.h"
 #include "hal/gpio_types.h"
-#include "pill_timer.h"
+#include "pill_timer_mgr.h"
 #include "portmacro.h"
 #include "rtc.h"
 #include <string.h>
@@ -36,6 +36,7 @@ static void pill_timer_mgr_handle_event(PillTimerEvent_t *event);
 static void start_timer_ringing(PillTimer_t* pt);
 static void stop_timer_ringing(PillTimer_t* pt);
 static bool is_timer_up(PillTimer_t *pt);
+static void midnight_reset_timer(PillTimer_t* pt);
 static void pill_timer_time_check_task(void*);
 static void switch_isr_callback(void* switch_num_cast_to_dispenser_idx_t);
 static void timeout_timer_callback(TimerHandle_t timer_handle);
@@ -100,7 +101,9 @@ void pill_timer_set_absolute(size_t timer, DispenserIdx_t disp, time_in_day_ms_t
     pill_timers[timer].ringing = false;
     pill_timers[timer].dispenser_idx = disp;
     pill_timers[timer].mode = PILL_TIMER_MODE_ABSOLUTE;
+
     pill_timers[timer].absolute.time = time_in_day;
+
     pill_timers[timer].absolute.today_timer_happened = false;
 
     xSemaphoreGive(pill_timer_mutex);
@@ -113,8 +116,10 @@ void pill_timer_set_relative(size_t timer, DispenserIdx_t disp, duration_ms_t in
     pill_timers[timer].ringing = false;
     pill_timers[timer].dispenser_idx = disp;
     pill_timers[timer].mode = PILL_TIMER_MODE_RELATIVE;
+
     pill_timers[timer].relative.num_per_day = num_per_day;
     pill_timers[timer].relative.time_between = interval;
+
     pill_timers[timer].relative.today_num_times_rang = 0;
     pill_timers[timer].relative.today_time_last_rang = UINT32_MAX;
 
@@ -135,47 +140,66 @@ static void pill_timer_mgr_task(void*) {
     PillTimerEvent_t event;
     while (true) {
         xQueueReceive(pill_timer_event_queue, &event, portMAX_DELAY);
+        
+        PillTimer_t* pt = event.pt;
+        if (!pt->active) { continue; }
+
         xSemaphoreTake(pill_timer_mutex, portMAX_DELAY);
-        pill_timer_mgr_handle_event(&event);
+        switch (event.type) {
+            case PILL_TIMER_EVENT_TIMER_UP: {
+                if (pt->active && !pt->ringing) {
+                    start_timer_ringing(pt);
+                }
+                break;
+            }
+            case PILL_TIMER_EVENT_DISPENSER_OPEN: {
+                if (pt->active) {
+                    if (pt->ringing) {
+                        stop_timer_ringing(pt);
+                    } else if (pt->mode == PILL_TIMER_MODE_RELATIVE && pt->relative.today_num_times_rang == 0) {
+                        pt->relative.today_time_last_rang = rtc_get_time_in_day_ms();
+                        // TODO: Buzzer or maybe screen element to note
+                        //       relative timer started?
+                    }
+                }
+                break;
+            }
+            case PILL_TIMER_EVENT_RINGING_TIMEOUT: {
+                if (pt->active && pt->ringing) {
+                    stop_timer_ringing(pt);
+                    // TODO: Log missed timer
+                }
+                break;
+            }
+            case PILL_TIMER_EVENT_MIDNIGHT_RESET: {
+                for (size_t i = 0; i < NUM_PILL_TIMERS; i++) {
+                    midnight_reset_timer(&pill_timers[i]);
+                }
+                break;
+            }
+        }
+
         xSemaphoreGive(pill_timer_mutex);
     }
 }
 
-static void pill_timer_mgr_handle_event(PillTimerEvent_t *event) {
-    PillTimer_t* pt = event->pt;
-    if (!pt->active) { return; }
-
-    switch (event->type) {
-        case PILL_TIMER_EVENT_TIMER_UP: {
-            if (pt->active && !pt->ringing) {
-                start_timer_ringing(pt);
-            }
-            break;
-        }
-        case PILL_TIMER_EVENT_DISPENSER_OPEN: {
-            if (pt->active && pt->ringing) {
-                stop_timer_ringing(pt);
-            }
-            break;
-        }
-        case PILL_TIMER_EVENT_RINGING_TIMEOUT: {
-            if (pt->active && pt->ringing) {
-                stop_timer_ringing(pt);
-                // TODO: Log missed timer
-            }
-            break;
-        }
-        case PILL_TIMER_EVENT_MIDNIGHT_RESET: {
-            break;
-        }
-    }
-}
-
 static void pill_timer_time_check_task(void*) {
+    time_in_day_ms_t last_time_checked = rtc_get_time_in_day_ms();
     TickType_t last_tick;
+
     while (true) {
         last_tick = xTaskGetTickCount();
         xSemaphoreTake(pill_timer_mutex, portMAX_DELAY);
+
+        if (last_time_checked > rtc_get_time_in_day_ms()) {
+            // Last time-of-day is greater than this time-of-day - must
+            // have clicked over midnight. Trigger a midnight reset.
+            const PillTimerEvent_t event = {
+                .pt = NULL,
+                .type = PILL_TIMER_EVENT_MIDNIGHT_RESET
+            };
+            xQueueSend(pill_timer_event_queue, &event, 0);
+        }
 
         for (size_t i = 0; i < NUM_PILL_TIMERS; i++) {
             PillTimer_t* pt = &pill_timers[i];
@@ -234,6 +258,25 @@ static bool is_timer_up(PillTimer_t *pt) {
     }
 
     return false;
+}
+
+static void midnight_reset_timer(PillTimer_t* pt) {
+    if (!pt->active) { return; }
+
+    if (pt->ringing) {
+        // Obviously this is a sloppy way to do this, but there are a
+        // bunch of edge cases here so easier to just not. The entire
+        // concept of of a midnight reset is already kind of sloppy so
+        // whatever.
+        stop_timer_ringing(pt);
+    }
+
+    if (pt->mode == PILL_TIMER_MODE_ABSOLUTE) {
+        pt->absolute.today_timer_happened = false;
+    } else if (pt->mode == PILL_TIMER_MODE_RELATIVE) {
+        pt->relative.today_num_times_rang = 0;
+        pt->relative.today_time_last_rang = UINT32_MAX;
+    }
 }
 
 static void switch_isr_callback(void* disp_idx_cast_to_dispenser_idx) {
