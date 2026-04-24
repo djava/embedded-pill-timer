@@ -32,7 +32,6 @@ typedef struct {
 static QueueHandle_t pill_timer_event_queue;
 
 static void pill_timer_mgr_task(void*);
-static void pill_timer_mgr_handle_event(PillTimerEvent_t *event);
 static void start_timer_ringing(PillTimer_t* pt);
 static void stop_timer_ringing(PillTimer_t* pt);
 static bool is_timer_up(PillTimer_t *pt);
@@ -135,6 +134,38 @@ void pill_timer_disable(size_t timer) {
 
     xSemaphoreGive(pill_timer_mutex);
 }
+
+duration_ms_t pill_timer_get_next_to_ring(PillTimer_t** out_pt) {
+    duration_ms_t shortest_time_until = UINT32_MAX;
+    PillTimer_t* shortest_time_until_pt = NULL;
+
+    const time_in_day_ms_t current_time = rtc_get_time_in_day_ms();
+    for (size_t i = 0; i < NUM_PILL_TIMERS; i++) {
+        PillTimer_t* pt = &pill_timers[i];
+        if (!pt->active) { continue; }
+
+        duration_ms_t time_until = UINT32_MAX;
+        if (pt->mode == PILL_TIMER_MODE_ABSOLUTE) {
+            if (!pt->absolute.today_timer_happened) {
+                time_until = current_time - pt->absolute.time;
+            }
+        } else if (pt->mode == PILL_TIMER_MODE_RELATIVE) {
+            if (pt->relative.today_num_times_rang < pt->relative.num_per_day) {
+                const duration_ms_t time_since = current_time - pt->relative.today_time_last_rang;
+                time_until = pt->relative.time_between - time_since;
+            }
+        }
+
+        if (time_until < shortest_time_until) {
+            shortest_time_until = time_until;
+            shortest_time_until_pt = pt;
+        }
+    }
+    
+    if (out_pt) { *out_pt = shortest_time_until_pt; }
+    return shortest_time_until;
+}
+
 
 static void pill_timer_mgr_task(void*) {
     PillTimerEvent_t event;

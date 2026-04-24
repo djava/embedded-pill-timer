@@ -13,14 +13,20 @@
 #include "defines.h"
 #include "display.h"
 #include "rtc.h"
-#include "pill_timer.h"
+#include "pill_timer_mgr.h"
 
-// XIAO ESP32-C3 default I2C pins: D4=SDA=GPIO6, D5=SCL=GPIO7
+// ESP32-C3 default I2C pins: D4=SDA=GPIO6, D5=SCL=GPIO7
 #define I2C_SDA_GPIO 6
 #define I2C_SCL_GPIO 7
 
 i2c_master_bus_handle_t i2c_bus;
 u8g2_t u8g2;
+
+const gpio_num_t DISPENSER_TO_GPIO_PIN[3] = {
+    [PILL_DISPENSER_IDX_INVALID] = GPIO_NUM_NC,
+    [PILL_DISPENSER_IDX_A] = GPIO_PIN_DISPENSER_A,
+    [PILL_DISPENSER_IDX_B] = GPIO_PIN_DISPENSER_B,
+};
 
 void app_main(void) {
     i2c_bus = NULL;
@@ -37,7 +43,7 @@ void app_main(void) {
 
     rtc_hw_init();
     display_init();
-    pill_timer_init();
+    pill_timer_mgr_init();
 
     while (true) {
         vTaskDelay(portMAX_DELAY);

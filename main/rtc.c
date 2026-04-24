@@ -39,9 +39,6 @@ display_time_in_day_t rtc_get_display_time_in_day(void) {
     return time;
 }
 
-#define MS_IN_SECOND (1000)
-#define MS_IN_MINUTE (60 * MS_IN_SECOND)
-#define MS_IN_HOUR (60 * MS_IN_MINUTE)
 
 time_in_day_ms_t rtc_get_time_in_day_ms(void) {
     bool clock_invalid;
