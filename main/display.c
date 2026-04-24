@@ -2,6 +2,7 @@
 #include "freertos/projdefs.h"
 #include "pill_timer_mgr.h"
 #include "portmacro.h"
+#include "esp_log.h"
 #include "esp_task.h"
 
 #include "defines.h"
@@ -10,7 +11,7 @@
 #include "u8g2.h"
 #include "u8g2_esp32_hal.h"
 
-#define DISPLAY_UPDATE_FREQ_MS (33)
+#define DISPLAY_UPDATE_FREQ_MS (1000/30)
 
 _Atomic(DisplayMode_t) display_mode;
 SemaphoreHandle_t display_mutex;
@@ -41,15 +42,17 @@ void display_init(void) {
 }
 
 static void display_task(void*) {
+    TickType_t last_tick;
     while (true) {
+        last_tick = xTaskGetTickCount();
         xSemaphoreTake(display_mutex, portMAX_DELAY);
 
         const DisplayMode_t mode = display_mode;
         switch (mode) {
-            case DISPLAY_MODE_CLOCK: 
+            case DISPLAY_MODE_CLOCK:
                 display_draw_mode_clock();
                 break;
-            case DISPLAY_MODE_MENU: 
+            case DISPLAY_MODE_MENU:
                 u8g2_ClearBuffer(&u8g2);
                 break;
             case DISPLAY_MODE_RINGING:
@@ -59,8 +62,13 @@ static void display_task(void*) {
         u8g2_SendBuffer(&u8g2);
 
         xSemaphoreGive(display_mutex);
+        
+        // const uint32_t draw_ms = (draw_end_tick - draw_start_tick) * portTICK_PERIOD_MS;
+        // ESP_LOGI("display", "frame draw took %" PRIu32 " ms (budget %d ms)",
+        //          (xTaskGetTickCount() - last_tick) * portTICK_PERIOD_MS,
+        //          DISPLAY_UPDATE_FREQ_MS);
 
-        ulTaskNotifyTake(pdTRUE, pdMS_TO_TICKS(250));
+        vTaskDelayUntil(&last_tick, pdMS_TO_TICKS(DISPLAY_UPDATE_FREQ_MS));
     }
 }
 

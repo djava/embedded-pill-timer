@@ -34,7 +34,7 @@ static QueueHandle_t pill_timer_event_queue;
 static void pill_timer_mgr_task(void*);
 static void start_timer_ringing(PillTimer_t* pt);
 static void stop_timer_ringing(PillTimer_t* pt);
-static bool is_timer_up(PillTimer_t *pt);
+static bool is_timer_up(const PillTimer_t *pt, time_in_day_ms_t current_time);
 static void midnight_reset_timer(PillTimer_t* pt);
 static void pill_timer_time_check_task(void*);
 static void switch_isr_callback(void* switch_num_cast_to_dispenser_idx_t);
@@ -84,7 +84,7 @@ void pill_timer_mgr_init(void) {
 
     xTaskCreate(
         pill_timer_time_check_task,
-        "Pill Timer Clock Checker Task",
+        "Pill Clock Checker Task",
         2048,
         NULL,
         TASK_PRIORITY_MED,
@@ -228,9 +228,11 @@ static void pill_timer_time_check_task(void*) {
     time_in_day_ms_t last_time_checked = rtc_get_time_in_day_ms();
 
     while (true) {
+        const time_in_day_ms_t current_time = rtc_get_time_in_day_ms();
+
         xSemaphoreTake(pill_timer_mutex, portMAX_DELAY);
 
-        if (last_time_checked > rtc_get_time_in_day_ms()) {
+        if (last_time_checked > current_time) {
             // Last time-of-day is greater than this time-of-day - must
             // have clicked over midnight. Trigger a midnight reset.
             const PillTimerEvent_t event = {
@@ -242,7 +244,7 @@ static void pill_timer_time_check_task(void*) {
 
         for (size_t i = 0; i < NUM_PILL_TIMERS; i++) {
             PillTimer_t* pt = &pill_timers[i];
-            if (is_timer_up(pt)) {
+            if (is_timer_up(pt, current_time)) {
                 const PillTimerEvent_t event = {
                     .pt = pt,
                     .type = PILL_TIMER_EVENT_TIMER_UP
@@ -252,7 +254,7 @@ static void pill_timer_time_check_task(void*) {
         }
 
         xSemaphoreGive(pill_timer_mutex);
-        last_time_checked = rtc_get_time_in_day_ms();
+        last_time_checked = current_time;
         vTaskDelay(pdMS_TO_TICKS(PILL_TIMER_CLOCK_CHECK_FREQ_MS));
     }
 }
@@ -278,9 +280,8 @@ static void stop_timer_ringing(PillTimer_t* pt) {
     // TODO: Stop buzzer
 }
 
-static bool is_timer_up(PillTimer_t *pt) {
+static bool is_timer_up(const PillTimer_t *pt, time_in_day_ms_t current_time) {
     if (pt->active && !pt->ringing) {
-        const time_in_day_ms_t current_time = rtc_get_time_in_day_ms();
         if (pt->mode == PILL_TIMER_MODE_ABSOLUTE) {
             if (current_time >= pt->absolute.time && !pt->absolute.today_timer_happened) {
                 return true;
