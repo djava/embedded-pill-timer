@@ -354,3 +354,16 @@ static void timeout_timer_callback(TimerHandle_t timer_handle) {
     };
     xQueueSend(pill_timer_event_queue, &event, 0);
 }
+
+void pill_timer_mgr_inject_dispenser_open(DispenserIdx_t disp_idx) {
+    for (size_t i = 0; i < NUM_PILL_TIMERS; i++) {
+        PillTimer_t *pt = &pill_timers[i];
+        if (pt->active && pt->dispenser_idx == disp_idx) {
+            const PillTimerEvent_t event = {
+                .type = PILL_TIMER_EVENT_DISPENSER_OPEN,
+                .pt = pt
+            };
+            xQueueSend(pill_timer_event_queue, &event, 0);
+        }
+    }
+}

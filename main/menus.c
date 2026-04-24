@@ -8,12 +8,6 @@
 #include <string.h>
 #include <sys/cdefs.h>
 
-typedef enum {
-    BUTTON_DOWN,
-    BUTTON_UP,
-    BUTTON_OK,
-} ButtonType_t;
-
 #define BUTTON_QUEUE_LEN (8)
 
 MenuState_t menu_state;
@@ -242,6 +236,10 @@ static void button_isr_handler(void* button_cast_to_buttontype) {
     if (higher_priority_was_woken) {
         portYIELD_FROM_ISR();
     }
+}
+
+void menus_inject_button(ButtonType_t button) {
+    xQueueSend(button_queue, &button, 0);
 }
 
 static void reset_menu_state(void) {

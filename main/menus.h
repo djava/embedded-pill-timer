@@ -8,8 +8,14 @@
 
 #define MENU_SEL_TIMER_BACK_IDX (NUM_PILL_TIMERS)
 
+typedef enum {
+    BUTTON_DOWN,
+    BUTTON_UP,
+    BUTTON_OK,
+} ButtonType_t;
 
 void menus_init(void);
+void menus_inject_button(ButtonType_t button);
 
 typedef enum {
     MENU_PAGE_TIMER_LIST,
