@@ -50,7 +50,6 @@ void pill_timer_mgr_init(void) {
     };
     gpio_config(&switch_gpio_config);
 
-    gpio_install_isr_service(ESP_INTR_FLAG_EDGE);
     gpio_isr_handler_add(GPIO_PIN_DISPENSER_A, 
                          switch_isr_callback,
                          (void*)(PILL_DISPENSER_IDX_A));
@@ -153,10 +152,15 @@ duration_ms_t pill_timer_get_next_to_ring(PillTimer_t** out_pt) {
         duration_ms_t time_until = UINT32_MAX;
         if (pt->mode == PILL_TIMER_MODE_ABSOLUTE) {
             if (!pt->absolute.today_timer_happened) {
-                time_until = current_time - pt->absolute.time;
+                time_until = pt->absolute.time - current_time;
             }
         } else if (pt->mode == PILL_TIMER_MODE_RELATIVE) {
-            if (pt->relative.today_num_times_rang < pt->relative.num_per_day) {
+            if (pt->relative.today_time_last_rang == UINT32_MAX) {
+                // Hasn't been taken yet - set it as now
+                time_until = 0;
+            }
+            else if (pt->relative.today_num_times_rang < pt->relative.num_per_day &&
+                     current_time > pt->relative.today_time_last_rang) {
                 const duration_ms_t time_since = current_time - pt->relative.today_time_last_rang;
                 time_until = pt->relative.interval - time_since;
             }
@@ -179,7 +183,7 @@ static void pill_timer_mgr_task(void*) {
         xQueueReceive(pill_timer_event_queue, &event, portMAX_DELAY);
         
         PillTimer_t* pt = event.pt;
-        if (!pt->active) { continue; }
+        if (pt && !pt->active) { continue; }
 
         xSemaphoreTake(pill_timer_mutex, portMAX_DELAY);
         switch (event.type) {
@@ -222,10 +226,8 @@ static void pill_timer_mgr_task(void*) {
 
 static void pill_timer_time_check_task(void*) {
     time_in_day_ms_t last_time_checked = rtc_get_time_in_day_ms();
-    TickType_t last_tick;
 
     while (true) {
-        last_tick = xTaskGetTickCount();
         xSemaphoreTake(pill_timer_mutex, portMAX_DELAY);
 
         if (last_time_checked > rtc_get_time_in_day_ms()) {
@@ -250,7 +252,8 @@ static void pill_timer_time_check_task(void*) {
         }
 
         xSemaphoreGive(pill_timer_mutex);
-        xTaskDelayUntil(&last_tick, pdMS_TO_TICKS(PILL_TIMER_CLOCK_CHECK_FREQ_MS));
+        last_time_checked = rtc_get_time_in_day_ms();
+        vTaskDelay(pdMS_TO_TICKS(PILL_TIMER_CLOCK_CHECK_FREQ_MS));
     }
 }
 
@@ -279,16 +282,20 @@ static bool is_timer_up(PillTimer_t *pt) {
     if (pt->active && !pt->ringing) {
         const time_in_day_ms_t current_time = rtc_get_time_in_day_ms();
         if (pt->mode == PILL_TIMER_MODE_ABSOLUTE) {
-            if (current_time > pt->absolute.time && !pt->absolute.today_timer_happened) {
+            if (current_time >= pt->absolute.time && !pt->absolute.today_timer_happened) {
                 return true;
             }
         } else if (pt->mode == PILL_TIMER_MODE_RELATIVE) {
             if (pt->relative.today_num_times_rang < pt->relative.num_per_day) {
-                const time_in_day_ms_t time_since_last =
-                    current_time - pt->relative.today_time_last_rang;
+                // Guard against current_time = UINT32_MAX or other edge
+                // cases causing underflow
+                if (current_time > pt->relative.today_time_last_rang) {
+                    const time_in_day_ms_t time_since_last =
+                        current_time - pt->relative.today_time_last_rang;
 
-                if (time_since_last > pt->relative.interval) {
-                    return true;
+                    if (time_since_last > pt->relative.interval) {
+                        return true;
+                    }
                 }
             }
         }
@@ -319,7 +326,7 @@ static void midnight_reset_timer(PillTimer_t* pt) {
 static void switch_isr_callback(void* disp_idx_cast_to_dispenser_idx) {
     const DispenserIdx_t disp_idx = (DispenserIdx_t)(disp_idx_cast_to_dispenser_idx);
     
-    BaseType_t higherPriorityTaskWoken;
+    BaseType_t higherPriorityTaskWoken = pdFALSE;
     for (size_t i = 0; i < NUM_PILL_TIMERS; i++) {
         PillTimer_t *pt = &pill_timers[i];
         

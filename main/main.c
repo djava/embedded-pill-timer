@@ -41,6 +41,7 @@ void app_main(void) {
     };
     ESP_ERROR_CHECK(i2c_new_master_bus(&i2c_config, &i2c_bus));
 
+    gpio_install_isr_service(ESP_INTR_FLAG_EDGE);
 
     rtc_hw_init();
     display_init();

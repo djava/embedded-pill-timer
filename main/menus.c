@@ -40,7 +40,6 @@ void menus_init(void) {
     };
 
     gpio_config(&button_config);
-    gpio_install_isr_service(ESP_INTR_FLAG_EDGE);
     gpio_isr_handler_add(GPIO_PIN_MENU_BUTTON_DOWN, button_isr_handler, (void*)BUTTON_DOWN);
     gpio_isr_handler_add(GPIO_PIN_MENU_BUTTON_UP, button_isr_handler, (void*)BUTTON_UP);
     gpio_isr_handler_add(GPIO_PIN_MENU_BUTTON_OK, button_isr_handler, (void*)BUTTON_OK);
@@ -62,6 +61,8 @@ void menus_init(void) {
 static void menu_task(void*) {
     ButtonType_t button;
 
+    // Initial take to make the first iteration's give work
+    xSemaphoreTake(menu_state_mutex, portMAX_DELAY);
     while (true) {
         xSemaphoreGive(menu_state_mutex);
         xQueueReceive(button_queue, &button, portMAX_DELAY);
@@ -93,8 +94,9 @@ static void menu_task(void*) {
                     // wrapping to 'back' button
                     if (*timer_idx == 0) {
                         *timer_idx = MENU_SEL_TIMER_BACK_IDX;
+                    } else {
+                        (*timer_idx)--;
                     }
-                    (*timer_idx)--;
                     break;
                 case BUTTON_OK:
                     // Button ok: If this is 'back' button then go back
@@ -125,8 +127,9 @@ static void menu_task(void*) {
                     // wrapping to 'back' button
                     if (*config_idx == 0) {
                         *config_idx = MENU_TIMER_CONFIG_IDX_BACK;
+                    } else {
+                        (*config_idx)--;
                     }
-                    (*config_idx)--;
                     break;
                 case BUTTON_OK:
                     // Button ok: Go back if config item is back, save
@@ -233,7 +236,7 @@ static void menu_task(void*) {
 static void button_isr_handler(void* button_cast_to_buttontype) {
     const ButtonType_t button = (ButtonType_t)(button_cast_to_buttontype);
 
-    BaseType_t higher_priority_was_woken;
+    BaseType_t higher_priority_was_woken = pdFALSE;
     xQueueSendFromISR(button_queue, &button, &higher_priority_was_woken);
 
     if (higher_priority_was_woken) {
@@ -246,7 +249,7 @@ static void reset_menu_state(void) {
     menu_state.sel_index.timer_num = 0;
 
     menu_state.sel_timer = 0;
-    menu_state.sel_dispenser = 0;
+    menu_state.sel_dispenser = PILL_DISPENSER_IDX_A;
     menu_state.sel_mode = PILL_TIMER_MODE_RELATIVE;
     
     menu_state.rel_num_per_day = 0;

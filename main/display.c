@@ -49,8 +49,12 @@ static void display_task(void*) {
             case DISPLAY_MODE_CLOCK: 
                 display_draw_mode_clock();
                 break;
-            case DISPLAY_MODE_MENU: break;
-            case DISPLAY_MODE_RINGING: break;
+            case DISPLAY_MODE_MENU: 
+                u8g2_ClearBuffer(&u8g2);
+                break;
+            case DISPLAY_MODE_RINGING:
+                u8g2_ClearBuffer(&u8g2);
+                break;
         }
         u8g2_SendBuffer(&u8g2);
 
@@ -68,8 +72,9 @@ static void display_draw_mode_clock(void) {
     static char str_buf[64];
 
     const display_time_in_day_t time = rtc_get_display_time_in_day();
-    const char* am_pm = time.hours > 12 ? "PM" : "AM";
-    snprintf(str_buf, sizeof(str_buf), "%02d:%02d:%02d %s", time.hours % 12, time.mins, time.secs, am_pm);
+    const char* am_pm = time.hours >= 12 ? "PM" : "AM";
+    const uint8_t display_hours = ((time.hours + 11) % 12) + 1;
+    snprintf(str_buf, sizeof(str_buf), "%02d:%02d:%02d %s", display_hours, time.mins, time.secs, am_pm);
 
     u8g2_ClearBuffer(&u8g2);
 
@@ -116,7 +121,7 @@ static size_t format_approx_duration(duration_ms_t duration, char* out_str, size
         
         const char* plural_modifier = num_hours > 1 ? "s" : "";
         return snprintf(out_str, len_out_str, "%" PRId32 " hr%s", num_hours, plural_modifier);
-    } else {
+    } else if (duration > (MS_IN_MINUTE / 2)) {
         // Less than 85% of an hour, give nearest minute count
         uint32_t num_mins = duration / MS_IN_MINUTE;
         
@@ -126,5 +131,8 @@ static size_t format_approx_duration(duration_ms_t duration, char* out_str, size
         
         const char* plural_modifier = num_mins > 1 ? "s" : "";
         return snprintf(out_str, len_out_str, "%" PRId32 " min%s", num_mins, plural_modifier);
+    } else {
+        // Less than 30 sec: return as now
+        return snprintf(out_str, len_out_str, "Now");
     }
 }
