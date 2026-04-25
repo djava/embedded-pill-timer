@@ -23,20 +23,20 @@ static void save_configured_timer();
 void menus_init(void) {
     button_queue = xQueueCreate(BUTTON_QUEUE_LEN, sizeof(ButtonType_t));
 
-    const gpio_config_t button_config = {
-        .pin_bit_mask = (1 << GPIO_PIN_MENU_BUTTON_DOWN) |
-                        (1 << GPIO_PIN_MENU_BUTTON_UP)   |
-                        (1 << GPIO_PIN_MENU_BUTTON_OK),
-        .mode = GPIO_MODE_INPUT,
-        .intr_type = GPIO_INTR_POSEDGE,
-        .pull_up_en = GPIO_PULLUP_ENABLE,
-        .pull_down_en = GPIO_PULLUP_DISABLE,
-    };
+    // const gpio_config_t button_config = {
+    //     .pin_bit_mask = (1 << GPIO_PIN_MENU_BUTTON_DOWN) |
+    //                     (1 << GPIO_PIN_MENU_BUTTON_UP)   |
+    //                     (1 << GPIO_PIN_MENU_BUTTON_OK),
+    //     .mode = GPIO_MODE_INPUT,
+    //     .intr_type = GPIO_INTR_POSEDGE,
+    //     .pull_up_en = GPIO_PULLUP_ENABLE,
+    //     .pull_down_en = GPIO_PULLUP_DISABLE,
+    // };
 
-    gpio_config(&button_config);
-    gpio_isr_handler_add(GPIO_PIN_MENU_BUTTON_DOWN, button_isr_handler, (void*)BUTTON_DOWN);
-    gpio_isr_handler_add(GPIO_PIN_MENU_BUTTON_UP, button_isr_handler, (void*)BUTTON_UP);
-    gpio_isr_handler_add(GPIO_PIN_MENU_BUTTON_OK, button_isr_handler, (void*)BUTTON_OK);
+    // gpio_config(&button_config);
+    // gpio_isr_handler_add(GPIO_PIN_MENU_BUTTON_DOWN, button_isr_handler, (void*)BUTTON_DOWN);
+    // gpio_isr_handler_add(GPIO_PIN_MENU_BUTTON_UP, button_isr_handler, (void*)BUTTON_UP);
+    // gpio_isr_handler_add(GPIO_PIN_MENU_BUTTON_OK, button_isr_handler, (void*)BUTTON_OK);
 
     reset_menu_state();
 

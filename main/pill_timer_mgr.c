@@ -50,12 +50,12 @@ void pill_timer_mgr_init(void) {
     };
     gpio_config(&switch_gpio_config);
 
-    gpio_isr_handler_add(GPIO_PIN_DISPENSER_A, 
-                         switch_isr_callback,
-                         (void*)(PILL_DISPENSER_IDX_A));
-    gpio_isr_handler_add(GPIO_PIN_DISPENSER_B,
-                         switch_isr_callback,
-                         (void*)(PILL_DISPENSER_IDX_B));
+    // gpio_isr_handler_add(GPIO_PIN_DISPENSER_A, 
+    //                      switch_isr_callback,
+    //                      (void*)(PILL_DISPENSER_IDX_A));
+    // gpio_isr_handler_add(GPIO_PIN_DISPENSER_B,
+    //                      switch_isr_callback,
+    //                      (void*)(PILL_DISPENSER_IDX_B));
 
     memset(&pill_timers, 0, sizeof(pill_timers));
     for (size_t i = 0; i < NUM_PILL_TIMERS; i++) {
