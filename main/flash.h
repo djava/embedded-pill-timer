@@ -6,7 +6,7 @@
 void flash_init(void);
 
 void flash_save_pill_timers(PillTimer_t* pts);
-bool flash_load_pill_timers(PillTimer_t* pts);
+bool flash_load_pill_timers(PillTimer_t* pts, pcf8563_time_t *timestamp);
 
 void flash_clear_pill_timer(void);
 

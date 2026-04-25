@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include "flash.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "esp_log.h"
@@ -36,6 +37,8 @@ static void print_help(void) {
         "  e/[space] = button OK\n"
         "  a = dispenser A open\n"
         "  q = dispenser B open\n"
+        "  c = clear flash state, reset\n"
+        "  r = reset\n"
         "  ? = show this help\n"
         "---------------------\n"
     );
@@ -69,6 +72,13 @@ static void debug_console_task(void*) {
             case 'q': case 'Q':
                 pill_timer_mgr_inject_dispenser_open(PILL_DISPENSER_IDX_B);
                 ESP_LOGI(TAG, "-> DISPENSER B OPEN");
+                break;
+            case 'c': case 'C':
+                flash_clear_pill_timer();
+                esp_restart();
+                break;
+            case 'r': case 'R':
+                esp_restart();
                 break;
             case '?': case 'h': case 'H':
                 print_help();

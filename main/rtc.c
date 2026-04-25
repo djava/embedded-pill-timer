@@ -47,7 +47,6 @@ display_time_in_day_t rtc_get_display_time_in_day(void) {
     return time;
 }
 
-
 time_in_day_ms_t rtc_get_time_in_day_ms(void) {
     bool clock_invalid;
     pcf8563_time_t pcf_time;
@@ -62,4 +61,23 @@ time_in_day_ms_t rtc_get_time_in_day_ms(void) {
         MS_IN_SECOND * pcf_time.sec;
 
     return time;
+}
+
+pcf8563_time_t rtc_get_full_timestamp(void) {
+    bool clock_invalid;
+    pcf8563_time_t pcf_time;
+
+    xSemaphoreTake(rtc_mutex, portMAX_DELAY);
+    ESP_ERROR_CHECK(pcf8563_get_time(&pcf8563, &pcf_time, &clock_invalid));
+    xSemaphoreGive(rtc_mutex);
+    
+    return pcf_time;
+}
+
+bool rtc_date_was_across_midnight(pcf8563_time_t *old_time) {
+    pcf8563_time_t now_time = rtc_get_full_timestamp();
+
+    return old_time->day != now_time.day ||
+           old_time->month != now_time.month ||
+           old_time->year != now_time.year;
 }

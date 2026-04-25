@@ -21,7 +21,7 @@ typedef struct {
             uint8_t num_per_day;
 
             time_in_day_ms_t today_time_last_rang;
-            size_t today_num_times_rang;
+            uint8_t today_num_times_taken;
         } relative;
         struct {
             time_in_day_ms_t time;
