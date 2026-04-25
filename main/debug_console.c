@@ -13,7 +13,6 @@ static const char *TAG = "debug_console";
 
 static void debug_console_task(void*);
 static void print_help(void);
-static void print_task_stats(void);
 
 void debug_console_init(void) {
     usb_serial_jtag_driver_config_t cfg = USB_SERIAL_JTAG_DRIVER_CONFIG_DEFAULT();
@@ -37,7 +36,6 @@ static void print_help(void) {
         "  e/[space] = button OK\n"
         "  a = dispenser A open\n"
         "  q = dispenser B open\n"
-        "  t = print FreeRTOS task stats\n"
         "  ? = show this help\n"
         "---------------------\n"
     );
@@ -71,9 +69,6 @@ static void debug_console_task(void*) {
             case 'q': case 'Q':
                 pill_timer_mgr_inject_dispenser_open(PILL_DISPENSER_IDX_B);
                 ESP_LOGI(TAG, "-> DISPENSER B OPEN");
-                break;
-            case 't': case 'T':
-                print_task_stats();
                 break;
             case '?': case 'h': case 'H':
                 print_help();

@@ -37,7 +37,7 @@ static void stop_timer_ringing(PillTimer_t* pt);
 static bool is_timer_up(const PillTimer_t *pt, time_in_day_ms_t current_time);
 static void midnight_reset_timer(PillTimer_t* pt);
 static void pill_timer_time_check_task(void*);
-static void switch_isr_callback(void* switch_num_cast_to_dispenser_idx_t);
+static void switch_isr_callback [[maybe_unused]] (void* switch_num_cast_to_dispenser_idx_t);
 static void timeout_timer_callback(TimerHandle_t timer_handle);
 
 void pill_timer_mgr_init(void) {
@@ -133,7 +133,6 @@ void pill_timer_disable(size_t timer) {
 
     pill_timers[timer].active = false;
     pill_timers[timer].ringing = false;
-    pill_timers[timer].dispenser_idx = PILL_DISPENSER_IDX_INVALID;
 
     // TODO: Save to NVM
 
