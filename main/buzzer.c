@@ -84,7 +84,7 @@ static void buzzer_task(void*) {
             portMAX_DELAY);
 
         if (bits & BUZZER_EVENT_BUTTON_PRESS) {
-            buzzer_tone(4000);
+            buzzer_tone(3000);
             vTaskDelay(pdMS_TO_TICKS(20));
             buzzer_off();
             xEventGroupClearBits(buzzer_event_group, BUZZER_EVENT_BUTTON_PRESS);
@@ -100,8 +100,20 @@ static void buzzer_task(void*) {
             vTaskDelay(pdMS_TO_TICKS(100));
             buzzer_off();
             vTaskDelay(pdMS_TO_TICKS(20));
+            buzzer_tone(2500);
+            vTaskDelay(pdMS_TO_TICKS(100));
+            buzzer_off();
+            vTaskDelay(pdMS_TO_TICKS(20));
             buzzer_tone(3500);
-            vTaskDelay(pdMS_TO_TICKS(200));
+            vTaskDelay(pdMS_TO_TICKS(50));
+            buzzer_off();
+            vTaskDelay(pdMS_TO_TICKS(20));
+            buzzer_tone(3500);
+            vTaskDelay(pdMS_TO_TICKS(50));
+            buzzer_off();
+            vTaskDelay(pdMS_TO_TICKS(20));
+            buzzer_tone(3500);
+            vTaskDelay(pdMS_TO_TICKS(50));
             buzzer_off();
             vTaskDelay(pdMS_TO_TICKS(20));
         } else if (bits & (BUZZER_EVENT_RINGING_B)) {
@@ -109,20 +121,16 @@ static void buzzer_task(void*) {
             vTaskDelay(pdMS_TO_TICKS(100));
             buzzer_off();
             vTaskDelay(pdMS_TO_TICKS(20));
+            buzzer_tone(3500);
+            vTaskDelay(pdMS_TO_TICKS(100));
+            buzzer_off();
+            vTaskDelay(pdMS_TO_TICKS(20));
             buzzer_tone(2500);
             vTaskDelay(pdMS_TO_TICKS(100));
             buzzer_off();
             vTaskDelay(pdMS_TO_TICKS(20));
-            buzzer_tone(3500);
-            vTaskDelay(pdMS_TO_TICKS(50));
-            buzzer_off();
-            vTaskDelay(pdMS_TO_TICKS(20));
-            buzzer_tone(3500);
-            vTaskDelay(pdMS_TO_TICKS(50));
-            buzzer_off();
-            vTaskDelay(pdMS_TO_TICKS(20));
-            buzzer_tone(3500);
-            vTaskDelay(pdMS_TO_TICKS(50));
+            buzzer_tone(1500);
+            vTaskDelay(pdMS_TO_TICKS(100));
             buzzer_off();
             vTaskDelay(pdMS_TO_TICKS(20));
         }

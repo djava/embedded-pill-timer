@@ -45,11 +45,13 @@ void app_main(void) {
 
     gpio_install_isr_service(ESP_INTR_FLAG_EDGE);
 
-    rtc_hw_init();
-    display_init();
+    // Order matters: pill_timer_mgr_init spawns tasks that immediately use the
+    // RTC and NVS, so flash + rtc must be initialized first.
     flash_init();
-    buzzer_init();
+    rtc_hw_init();
     pill_timer_mgr_init();
+    display_init();
+    buzzer_init();
     menus_init();
     debug_console_init();
 

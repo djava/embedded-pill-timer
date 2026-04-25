@@ -22,8 +22,8 @@ void rtc_hw_init(void) {
             .month = 4,
             .day = 22,
             .hour = 9,
-            .min = 13,
-            .sec = 0
+            .min = 14,
+            .sec = 40
         };
         ESP_ERROR_CHECK(pcf8563_set_time(&pcf8563, &time));
     }

@@ -1,4 +1,6 @@
 #include "buzzer.h"
+#include "display.h"
+#include "flash.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/projdefs.h"
 #include "freertos/queue.h"
@@ -74,8 +76,6 @@ void pill_timer_mgr_init(void) {
         );
     }
 
-    // TODO: Load froM NVM
-
     pill_timer_event_queue = xQueueCreate(PILL_TIMER_EVENT_QUEUE_LENGTH, sizeof(PillTimerEvent_t));
     pill_timer_mutex = xSemaphoreCreateMutex();
 
@@ -108,7 +108,7 @@ void pill_timer_set_absolute(size_t timer, DispenserIdx_t disp, time_in_day_ms_t
 
     pill_timers[timer].absolute.time = time_in_day;
 
-    pill_timers[timer].absolute.today_timer_happened = false;
+    pill_timers[timer].absolute.today_timer_happened = (rtc_get_time_in_day_ms() > time_in_day);
 
     flash_save_pill_timers(pill_timers);
 
@@ -150,6 +150,8 @@ duration_ms_t pill_timer_get_next_to_ring(PillTimer_t** out_pt) {
     PillTimer_t* shortest_time_until_pt = NULL;
 
     const time_in_day_ms_t current_time = rtc_get_time_in_day_ms();
+    xSemaphoreTake(pill_timer_mutex, portMAX_DELAY);
+
     for (size_t i = 0; i < NUM_PILL_TIMERS; i++) {
         PillTimer_t* pt = &pill_timers[i];
         if (!pt->active) { continue; }
@@ -178,7 +180,21 @@ duration_ms_t pill_timer_get_next_to_ring(PillTimer_t** out_pt) {
     }
     
     if (out_pt) { *out_pt = shortest_time_until_pt; }
+    xSemaphoreGive(pill_timer_mutex);
     return shortest_time_until;
+}
+
+const PillTimer_t* pill_timer_get_ringing(void) {
+    xSemaphoreTake(pill_timer_mutex, portMAX_DELAY);
+    for (size_t i = 0; i < NUM_PILL_TIMERS; i++) {
+        if (pill_timers[i].active && pill_timers[i].ringing) {
+            xSemaphoreGive(pill_timer_mutex);
+            return &pill_timers[i];
+        }
+    }
+
+    xSemaphoreGive(pill_timer_mutex);
+    return NULL;
 }
 
 const PillTimer_t* pill_timer_get_timer(size_t timer) {
@@ -217,7 +233,6 @@ static void pill_timer_mgr_task(void*) {
             case PILL_TIMER_EVENT_RINGING_TIMEOUT: {
                 if (pt->active && pt->ringing) {
                     stop_timer_ringing(pt);
-                    // TODO: Log missed timer
                 }
                 break;
             }
@@ -280,6 +295,7 @@ static void start_timer_ringing(PillTimer_t* pt) {
     xTimerStart(pt->timeout_timer_handle, 0);
 
     buzzer_set_event(DISPENSER_TO_RINGING_EVENT[pt->dispenser_idx]);
+    display_mode = DISPLAY_MODE_RINGING;
 }
 
 static void stop_timer_ringing(PillTimer_t* pt) {
@@ -287,6 +303,7 @@ static void stop_timer_ringing(PillTimer_t* pt) {
     xTimerStop(pt->timeout_timer_handle, 0);
 
     buzzer_clear_event(DISPENSER_TO_RINGING_EVENT[pt->dispenser_idx]);
+    display_mode = DISPLAY_MODE_CLOCK;
 }
 
 static bool is_timer_up(const PillTimer_t *pt, time_in_day_ms_t current_time) {

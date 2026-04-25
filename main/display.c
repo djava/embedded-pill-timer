@@ -28,7 +28,7 @@ static void display_draw_mode_menu(void);
 static void display_draw_mode_menu_timer_list(void);
 static void display_draw_mode_menu_config_list(void);
 static void display_draw_mode_menu_config_item(void);
-
+static void display_draw_mode_ringing(void);
 
 void display_init(void) {
     display_mode = DISPLAY_MODE_CLOCK;
@@ -65,7 +65,7 @@ static void display_task(void*) {
                 display_draw_mode_menu();
                 break;
             case DISPLAY_MODE_RINGING:
-                u8g2_ClearBuffer(&u8g2);
+                display_draw_mode_ringing();
                 break;
         }
         const TickType_t t1 [[maybe_unused]] = xTaskGetTickCount();
@@ -119,7 +119,7 @@ static void display_draw_mode_clock(void) {
     PillTimer_t* next_timer;
     duration_ms_t time_till_next_timer = pill_timer_get_next_to_ring(&next_timer);
     if (next_timer) {
-        char next_timer_buf[8];
+        char next_timer_buf[16];
         format_approx_relative_duration(time_till_next_timer, next_timer_buf, sizeof(next_timer_buf));
 
         char dispenser_char = 'A' + next_timer->dispenser_idx;
@@ -423,4 +423,34 @@ static void display_draw_mode_menu_config_item(void) {
             125, 45,
             121, 50);
     }
+}
+
+static void display_draw_mode_ringing() {
+    u8g2_ClearBuffer(&u8g2);
+
+    const PillTimer_t* pt = pill_timer_get_ringing();
+    const char disp_char = 'A' + pt->dispenser_idx;
+
+    u8g2_SetFont(&u8g2, u8g2_font_10x20_tf);
+
+    snprintf(str_buf, sizeof(str_buf), "Ringing:");
+    u8g2_DrawStr(&u8g2,
+                (DISPLAY_WIDTH_PX - u8g2_GetStrWidth(&u8g2, str_buf)) / 2,
+                20,
+                str_buf);
+
+    snprintf(str_buf, sizeof(str_buf), "Dispenser %c", disp_char);
+    u8g2_DrawStr(&u8g2,
+                 (DISPLAY_WIDTH_PX - u8g2_GetStrWidth(&u8g2, str_buf)) / 2,
+                 40,
+                 str_buf);
+                 
+    const display_time_in_day_t time = rtc_get_display_time_in_day();
+    const char* am_pm = time.hours >= 12 ? "PM" : "AM";
+    const uint8_t display_hours = ((time.hours + 11) % 12) + 1;
+    snprintf(str_buf, sizeof(str_buf), "%02d:%02d:%02d %s", display_hours, time.mins, time.secs, am_pm);
+    u8g2_DrawStr(&u8g2,
+                 (DISPLAY_WIDTH_PX - u8g2_GetStrWidth(&u8g2, str_buf)) / 2,
+                 60,
+                 str_buf);
 }
