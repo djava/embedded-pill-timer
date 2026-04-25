@@ -154,11 +154,11 @@ static size_t format_approx_relative_duration(duration_ms_t duration, char* out_
         const uint32_t rem_ms = duration % MS_IN_MINUTE;
         if (rem_ms > (MS_IN_MINUTE / 2)) { num_mins++; }
         
-        const char* plural_modifier = num_mins > 1 ? "s" : "";
+        const char* plural_modifier = num_mins > 1 ? "s" : " ";
         return snprintf(out_str, len_out_str, "in %" PRId32 " min%s", num_mins, plural_modifier);
     } else {
         // Less than 30 sec: return as now
-        return snprintf(out_str, len_out_str, "Now");
+        return snprintf(out_str, len_out_str, "in <1 min");
     }
 }
 
