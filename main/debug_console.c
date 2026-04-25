@@ -39,6 +39,7 @@ static void print_help(void) {
         "  q = dispenser B open\n"
         "  c = clear flash state, reset\n"
         "  r = reset\n"
+        "  m = midnight reset\n"
         "  ? = show this help\n"
         "---------------------\n"
     );
@@ -79,6 +80,9 @@ static void debug_console_task(void*) {
                 break;
             case 'r': case 'R':
                 esp_restart();
+                break;
+            case 'm': case 'M':
+                pill_timer_mgr_inject_midnight_reset();
                 break;
             case '?': case 'h': case 'H':
                 print_help();

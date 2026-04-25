@@ -5,6 +5,7 @@
 #include "hal/gpio_types.h"
 #include "esp_log.h"
 #include "portmacro.h"
+#include <inttypes.h>
 #include <string.h>
 
 #include "buzzer.h"
@@ -17,6 +18,8 @@
 
 #define PILL_TIMER_CLOCK_CHECK_FREQ_MS (500)
 #define PILL_TIMER_EVENT_QUEUE_LENGTH (5)
+
+#define PT_LOG_TAG "pill_timer"
 
 static PillTimer_t pill_timers[NUM_PILL_TIMERS];
 static SemaphoreHandle_t pill_timer_mutex;
@@ -73,8 +76,11 @@ void pill_timer_mgr_init(void) {
 
     // Timer handles are runtime-only and must not be persisted across reboots —
     // recreate every boot regardless of whether state was restored from flash.
+    // Also clear the ringing flag: a reboot mid-ring would otherwise leave the
+    // timer stuck "ringing" with no active xTimer behind it.
     for (size_t i = 0; i < NUM_PILL_TIMERS; i++) {
         PillTimer_t* pt = &pill_timers[i];
+        pt->ringing = false;
         pt->timeout_timer_handle = xTimerCreate("Timeout",
             pdMS_TO_TICKS(PILL_TIMER_TIMEOUT_DURATION_MS),
             pdFALSE,
@@ -86,10 +92,7 @@ void pill_timer_mgr_init(void) {
     if (rtc_date_was_across_midnight(&load_timestamp)) {
         // If we're loading a saved timer state from a different day,
         // trigger a midnight reset for it.
-        const PillTimerEvent_t event = {
-            .type = PILL_TIMER_EVENT_MIDNIGHT_RESET
-        };
-        xQueueSend(pill_timer_event_queue, &event, portMAX_DELAY);
+        pill_timer_mgr_inject_midnight_reset();
     }
 
 
@@ -143,6 +146,10 @@ void pill_timer_set_relative(size_t timer, DispenserIdx_t disp, duration_ms_t in
     pill_timers[timer].relative.today_num_times_taken = 0;
     pill_timers[timer].relative.today_time_last_rang = UINT32_MAX;
 
+    ESP_LOGI(PT_LOG_TAG,
+             "set_relative idx=%u disp=%d interval=%" PRIu32 " num_per_day=%u -> taken=0 last_rang=MAX",
+             (unsigned)timer, (int)disp, interval, (unsigned)num_per_day);
+
     flash_save_pill_timers(pill_timers);
 
     xSemaphoreGive(pill_timer_mutex);
@@ -150,6 +157,16 @@ void pill_timer_set_relative(size_t timer, DispenserIdx_t disp, duration_ms_t in
 
 void pill_timer_disable(size_t timer) {
     xSemaphoreTake(pill_timer_mutex, portMAX_DELAY);
+
+    if (pill_timers[timer].mode == PILL_TIMER_MODE_RELATIVE) {
+        ESP_LOGI(PT_LOG_TAG,
+                 "disable idx=%u (was relative: taken=%u last_rang=%" PRIu32 ")",
+                 (unsigned)timer,
+                 (unsigned)pill_timers[timer].relative.today_num_times_taken,
+                 pill_timers[timer].relative.today_time_last_rang);
+    } else {
+        ESP_LOGI(PT_LOG_TAG, "disable idx=%u", (unsigned)timer);
+    }
 
     pill_timers[timer].active = false;
     pill_timers[timer].ringing = false;
@@ -179,11 +196,19 @@ duration_ms_t pill_timer_get_next_to_ring(PillTimer_t** out_pt) {
             if (pt->relative.today_time_last_rang == UINT32_MAX) {
                 // Hasn't been taken yet - set it as now
                 time_until = 0;
-            }
-            else if (pt->relative.today_num_times_taken < pt->relative.num_per_day &&
-                     current_time > pt->relative.today_time_last_rang) {
-                const duration_ms_t time_since = current_time - pt->relative.today_time_last_rang;
-                time_until = pt->relative.interval - time_since;
+            } else if (pt->relative.today_num_times_taken < pt->relative.num_per_day) {
+                if (current_time > pt->relative.today_time_last_rang) {
+                    const duration_ms_t time_since = current_time - pt->relative.today_time_last_rang;
+                    if (time_since >= pt->relative.interval) {
+                        time_until = 0;
+                    } else {
+                        time_until = pt->relative.interval - time_since;
+                    }
+                } else {
+                    // last_rang is from a prior day's time-of-day; treat as
+                    // overdue rather than leaking the UINT32_MAX sentinel.
+                    time_until = 0;
+                }
             }
         }
 
@@ -239,6 +264,11 @@ static void pill_timer_mgr_task(void*) {
                     } else if (pt->mode == PILL_TIMER_MODE_RELATIVE && pt->relative.today_num_times_taken == 0) {
                         pt->relative.today_time_last_rang = rtc_get_time_in_day_ms();
                         pt->relative.today_num_times_taken++;
+                        ESP_LOGI(PT_LOG_TAG,
+                                 "dispenser_open (first take, not ringing) idx=%d -> taken=%u last_rang=%" PRIu32,
+                                 (int)(pt - pill_timers),
+                                 (unsigned)pt->relative.today_num_times_taken,
+                                 pt->relative.today_time_last_rang);
                         flash_save_pill_timers(pill_timers);
                     }
                 }
@@ -253,8 +283,8 @@ static void pill_timer_mgr_task(void*) {
             case PILL_TIMER_EVENT_MIDNIGHT_RESET: {
                 for (size_t i = 0; i < NUM_PILL_TIMERS; i++) {
                     midnight_reset_timer(&pill_timers[i]);
-                    flash_save_pill_timers(pill_timers);
                 }
+                flash_save_pill_timers(pill_timers);
                 break;
             }
         }
@@ -305,6 +335,11 @@ static void start_timer_ringing(PillTimer_t* pt) {
     } else if (pt->mode == PILL_TIMER_MODE_RELATIVE) {
         pt->relative.today_num_times_taken++;
         pt->relative.today_time_last_rang = rtc_get_time_in_day_ms();
+        ESP_LOGI(PT_LOG_TAG,
+                 "start_ringing (relative) idx=%d -> taken=%u last_rang=%" PRIu32,
+                 (int)(pt - pill_timers),
+                 (unsigned)pt->relative.today_num_times_taken,
+                 pt->relative.today_time_last_rang);
     }
     flash_save_pill_timers(pill_timers);
 
@@ -330,8 +365,11 @@ static bool is_timer_up(const PillTimer_t *pt, time_in_day_ms_t current_time) {
             }
         } else if (pt->mode == PILL_TIMER_MODE_RELATIVE) {
             if (pt->relative.today_num_times_taken < pt->relative.num_per_day) {
-                // Guard against current_time = UINT32_MAX or other edge
-                // cases causing underflow
+                if (pt->relative.today_time_last_rang == UINT32_MAX) {
+                    // hasn't rung yet today, wait for the user to take
+                    // the first dose before setting the intervals
+                    return false;
+                }
                 if (current_time > pt->relative.today_time_last_rang) {
                     const time_in_day_ms_t time_since_last =
                         current_time - pt->relative.today_time_last_rang;
@@ -339,6 +377,10 @@ static bool is_timer_up(const PillTimer_t *pt, time_in_day_ms_t current_time) {
                     if (time_since_last > pt->relative.interval) {
                         return true;
                     }
+                } else {
+                    // current_time <= last_rang means last_rang is from a
+                    // prior day's time-of-day (midnight reset was missed).
+                    return false;
                 }
             }
         }
@@ -363,6 +405,9 @@ static void midnight_reset_timer(PillTimer_t* pt) {
     } else if (pt->mode == PILL_TIMER_MODE_RELATIVE) {
         pt->relative.today_num_times_taken = 0;
         pt->relative.today_time_last_rang = UINT32_MAX;
+        ESP_LOGI(PT_LOG_TAG,
+                 "midnight_reset (relative) idx=%d -> taken=0 last_rang=MAX",
+                 (int)(pt - pill_timers));
     }
 }
 
@@ -414,4 +459,11 @@ void pill_timer_mgr_inject_dispenser_open(DispenserIdx_t disp_idx) {
     }
     
     buzzer_set_event(BUZZER_EVENT_DISPENSER_OPEN);
+}
+
+void pill_timer_mgr_inject_midnight_reset(void) {
+    const PillTimerEvent_t event = {
+        .type = PILL_TIMER_EVENT_MIDNIGHT_RESET
+    };
+    xQueueSend(pill_timer_event_queue, &event, portMAX_DELAY);
 }

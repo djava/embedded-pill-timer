@@ -40,5 +40,6 @@ const PillTimer_t* pill_timer_get_ringing(void);
 duration_ms_t pill_timer_get_next_to_ring(PillTimer_t** out_pt);
 
 void pill_timer_mgr_inject_dispenser_open(DispenserIdx_t disp);
+void pill_timer_mgr_inject_midnight_reset(void);
 
 #endif
