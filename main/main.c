@@ -25,7 +25,6 @@ i2c_master_bus_handle_t i2c_bus;
 u8g2_t u8g2;
 
 const gpio_num_t DISPENSER_TO_GPIO_PIN[3] = {
-    [PILL_DISPENSER_IDX_INVALID] = GPIO_NUM_NC,
     [PILL_DISPENSER_IDX_A] = GPIO_PIN_DISPENSER_A,
     [PILL_DISPENSER_IDX_B] = GPIO_PIN_DISPENSER_B,
 };

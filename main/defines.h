@@ -22,7 +22,6 @@ typedef struct {
 #define PILL_TIMER_TIMEOUT_DURATION_MS (30000)
 
 typedef enum {
-    PILL_DISPENSER_IDX_INVALID = 0,
     PILL_DISPENSER_IDX_A,
     PILL_DISPENSER_IDX_B,
 } DispenserIdx_t;

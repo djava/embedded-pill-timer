@@ -16,9 +16,10 @@ SemaphoreHandle_t menu_state_mutex;
 static QueueHandle_t button_queue;
 
 static void menu_task(void*);
-static void button_isr_handler(void* button_arg);
+static void button_isr_handler [[gnu::unused]] (void* button_arg);
 static void reset_menu_state();
 static void save_configured_timer();
+static void update_config_item_has_dirs();
 
 void menus_init(void) {
     button_queue = xQueueCreate(BUTTON_QUEUE_LEN, sizeof(ButtonType_t));
@@ -102,6 +103,7 @@ static void menu_task(void*) {
                         menu_state.sel_timer = *timer_idx;
                         menu_state.sel_index.config_idx = 0;
                         menu_state.page = MENU_PAGE_CONFIG_LIST;
+                        // TODO: Load current timer state into menu_state
                     }
                     break;
             }
@@ -112,7 +114,7 @@ static void menu_task(void*) {
                     // Button down: Cycle through config items forwards,
                     // wrapping to 'back' button
                     (*config_idx)++;
-                    if (*config_idx > MENU_TIMER_CONFIG_IDX_BACK) {
+                    if (*config_idx >= MENU_TIMER_NUM_ITEMS_IN_CONFIG_IDX) {
                         *config_idx = 0;
                     }
                     break;
@@ -120,7 +122,7 @@ static void menu_task(void*) {
                     // Button up: Cycle through config items backwards,
                     // wrapping to 'back' button
                     if (*config_idx == 0) {
-                        *config_idx = MENU_TIMER_CONFIG_IDX_BACK;
+                        *config_idx = MENU_TIMER_NUM_ITEMS_IN_CONFIG_IDX - 1;
                     } else {
                         (*config_idx)--;
                     }
@@ -134,8 +136,11 @@ static void menu_task(void*) {
                         menu_state.page = MENU_PAGE_TIMER_LIST;
                     } else if (*config_idx == MENU_TIMER_CONFIG_IDX_SAVE) {
                         save_configured_timer();
+                        menu_state.sel_index.timer_num = menu_state.sel_timer;
+                        menu_state.page = MENU_PAGE_TIMER_LIST;
                     } else {
                         menu_state.page = MENU_PAGE_CONFIG_ITEM;
+                        update_config_item_has_dirs();
                     }
                     break;
             }
@@ -153,13 +158,14 @@ static void menu_task(void*) {
                     break;
                 case MENU_TIMER_CONFIG_IDX_DISPENSER:
                     if (button == BUTTON_UP) {
-                        menu_state.sel_dispenser--;
-                        if (menu_state.sel_dispenser == PILL_DISPENSER_IDX_INVALID) {
-                            menu_state.sel_dispenser = NUM_PILL_DISPENSERS;
+                        if (menu_state.sel_dispenser == 0) {
+                            menu_state.sel_dispenser = NUM_PILL_DISPENSERS - 1;
+                        } else {
+                            menu_state.sel_dispenser--;
                         }
                     } else if (button == BUTTON_DOWN) {
                         menu_state.sel_dispenser++;
-                        if (menu_state.sel_dispenser > NUM_PILL_DISPENSERS) {
+                        if (menu_state.sel_dispenser >= NUM_PILL_DISPENSERS) {
                             menu_state.sel_dispenser = PILL_DISPENSER_IDX_A;
                         }
                     }
@@ -220,9 +226,11 @@ static void menu_task(void*) {
                 
                 case MENU_TIMER_CONFIG_IDX_SAVE:
                 case MENU_TIMER_CONFIG_IDX_BACK:
+                case MENU_TIMER_NUM_ITEMS_IN_CONFIG_IDX:
                     __unreachable();
                     break;
             }
+            update_config_item_has_dirs();
         }
     }
 }
@@ -254,6 +262,9 @@ static void reset_menu_state(void) {
     menu_state.rel_interval = 0;
 
     menu_state.abs_time = 0;
+
+    menu_state.config_item_has_up = true;
+    menu_state.config_item_has_down = true;
 }
 
 static void save_configured_timer() {
@@ -273,5 +284,26 @@ static void save_configured_timer() {
         }
     } else {
         pill_timer_disable(menu_state.sel_timer);
+    }
+}
+
+static void update_config_item_has_dirs() {
+    switch (menu_state.sel_index.config_idx) {
+        case MENU_TIMER_CONFIG_IDX_REL_INTERVAL:
+            menu_state.config_item_has_up = (menu_state.rel_interval != REL_INTERVAL_CONFIG_MAX_MS);
+            menu_state.config_item_has_down = (menu_state.rel_interval != 0);
+            break;
+        case MENU_TIMER_CONFIG_IDX_REL_NUM_PER_DAY:
+            menu_state.config_item_has_up = (menu_state.rel_num_per_day != REL_NUM_PER_DAY_CONFIG_MAX);
+            menu_state.config_item_has_down = (menu_state.rel_num_per_day != 0);
+            break;
+        case MENU_TIMER_CONFIG_IDX_ABS_TIME:
+            menu_state.config_item_has_up = (menu_state.abs_time != ABS_TIME_CONFIG_MAX_MS);
+            menu_state.config_item_has_down = (menu_state.abs_time != 0);
+            break;
+        default:
+            menu_state.config_item_has_down = true;
+            menu_state.config_item_has_up = true;
+            break;
     }
 }

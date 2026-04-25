@@ -20,7 +20,7 @@ void menus_inject_button(ButtonType_t button);
 typedef enum {
     MENU_PAGE_TIMER_LIST,
     MENU_PAGE_CONFIG_LIST,
-    MENU_PAGE_CONFIG_ITEM
+    MENU_PAGE_CONFIG_ITEM,
 } MenuPage_t;
 
 typedef enum {
@@ -32,6 +32,7 @@ typedef enum {
     MENU_TIMER_CONFIG_IDX_ABS_TIME,
     MENU_TIMER_CONFIG_IDX_SAVE,
     MENU_TIMER_CONFIG_IDX_BACK,
+    MENU_TIMER_NUM_ITEMS_IN_CONFIG_IDX,
 } MenuTimerConfigIdx_t;
 
 typedef struct {
@@ -50,6 +51,9 @@ typedef struct {
     duration_ms_t rel_interval;
 
     time_in_day_ms_t abs_time;
+
+    bool config_item_has_up;
+    bool config_item_has_down;
 } MenuState_t;
 
 
