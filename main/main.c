@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include "buzzer.h"
 #include "esp_intr_alloc.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
@@ -45,6 +46,7 @@ void app_main(void) {
 
     rtc_hw_init();
     display_init();
+    buzzer_init();
     pill_timer_mgr_init();
     menus_init();
     debug_console_init();

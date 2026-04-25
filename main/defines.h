@@ -45,6 +45,8 @@ extern const gpio_num_t DISPENSER_TO_GPIO_PIN[3];
 #define GPIO_PIN_MENU_BUTTON_DOWN (21)
 #define GPIO_PIN_MENU_BUTTON_OK   (9)
 
+#define GPIO_PIN_BUZZER           (5)
+
 #define MS_IN_SECOND (1000)
 #define MS_IN_MINUTE (60 * MS_IN_SECOND)
 #define MS_IN_HOUR (60 * MS_IN_MINUTE)

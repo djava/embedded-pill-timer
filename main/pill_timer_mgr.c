@@ -1,3 +1,4 @@
+#include "buzzer.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/projdefs.h"
 #include "freertos/queue.h"
@@ -78,7 +79,7 @@ void pill_timer_mgr_init(void) {
         "Pill Timer Manager Task",
         4096,
         NULL,
-        TASK_PRIORITY_HIGH,
+        TASK_PRIORITY_MED,
         NULL
     );
 
@@ -273,14 +274,14 @@ static void start_timer_ringing(PillTimer_t* pt) {
 
     xTimerStart(pt->timeout_timer_handle, 0);
 
-    // TODO: Start buzzer
+    buzzer_set_event(DISPENSER_TO_RINGING_EVENT[pt->dispenser_idx]);
 }
 
 static void stop_timer_ringing(PillTimer_t* pt) {
     pt->ringing = false;
     xTimerStop(pt->timeout_timer_handle, 0);
 
-    // TODO: Stop buzzer
+    buzzer_clear_event(DISPENSER_TO_RINGING_EVENT[pt->dispenser_idx]);
 }
 
 static bool is_timer_up(const PillTimer_t *pt, time_in_day_ms_t current_time) {
@@ -344,6 +345,9 @@ static void switch_isr_callback(void* disp_idx_cast_to_dispenser_idx) {
         }
     }
 
+    buzzer_set_event_from_isr(BUZZER_EVENT_DISPENSER_OPEN,
+                              &higherPriorityTaskWoken);
+
     if (higherPriorityTaskWoken) {
         portYIELD_FROM_ISR();
     }
@@ -370,4 +374,6 @@ void pill_timer_mgr_inject_dispenser_open(DispenserIdx_t disp_idx) {
             xQueueSend(pill_timer_event_queue, &event, 0);
         }
     }
+    
+    buzzer_set_event(BUZZER_EVENT_DISPENSER_OPEN);
 }

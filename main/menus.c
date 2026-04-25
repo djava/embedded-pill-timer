@@ -1,3 +1,4 @@
+#include "buzzer.h"
 #include "display.h"
 #include "driver/gpio.h"
 
@@ -63,6 +64,7 @@ static void menu_task(void*) {
         xSemaphoreGive(menu_state_mutex);
         xQueueReceive(button_queue, &button, portMAX_DELAY);
         xSemaphoreTake(menu_state_mutex, portMAX_DELAY);
+        buzzer_set_event(BUZZER_EVENT_BUTTON_PRESS);
 
         if (display_mode == DISPLAY_MODE_CLOCK) {
             // If we're still on clock, switch to menu
