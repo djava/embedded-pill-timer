@@ -13,6 +13,7 @@ static const char *TAG = "debug_console";
 
 static void debug_console_task(void*);
 static void print_help(void);
+static void print_task_stats(void);
 
 void debug_console_init(void) {
     usb_serial_jtag_driver_config_t cfg = USB_SERIAL_JTAG_DRIVER_CONFIG_DEFAULT();
@@ -31,11 +32,12 @@ void debug_console_init(void) {
 static void print_help(void) {
     printf(
         "\n--- Debug console ---\n"
-        "  u = button UP\n"
-        "  d = button DOWN\n"
-        "  o = button OK\n"
+        "  w = button UP\n"
+        "  s = button DOWN\n"
+        "  e/[space] = button OK\n"
         "  a = dispenser A open\n"
-        "  b = dispenser B open\n"
+        "  q = dispenser B open\n"
+        "  t = print FreeRTOS task stats\n"
         "  ? = show this help\n"
         "---------------------\n"
     );
@@ -50,15 +52,15 @@ static void debug_console_task(void*) {
         if (n <= 0) { continue; }
 
         switch (c) {
-            case 'u': case 'U':
+            case 'w': case 'W':
                 menus_inject_button(BUTTON_UP);
                 ESP_LOGI(TAG, "-> BUTTON_UP");
                 break;
-            case 'd': case 'D':
+            case 's': case 'S':
                 menus_inject_button(BUTTON_DOWN);
                 ESP_LOGI(TAG, "-> BUTTON_DOWN");
                 break;
-            case 'o': case 'O':
+            case ' ': case 'e':
                 menus_inject_button(BUTTON_OK);
                 ESP_LOGI(TAG, "-> BUTTON_OK");
                 break;
@@ -66,14 +68,17 @@ static void debug_console_task(void*) {
                 pill_timer_mgr_inject_dispenser_open(PILL_DISPENSER_IDX_A);
                 ESP_LOGI(TAG, "-> DISPENSER A OPEN");
                 break;
-            case 'b': case 'B':
+            case 'q': case 'Q':
                 pill_timer_mgr_inject_dispenser_open(PILL_DISPENSER_IDX_B);
                 ESP_LOGI(TAG, "-> DISPENSER B OPEN");
+                break;
+            case 't': case 'T':
+                print_task_stats();
                 break;
             case '?': case 'h': case 'H':
                 print_help();
                 break;
-            case '\n': case '\r': case ' ': case '\t':
+            case '\n': case '\r': case '\t':
                 break;
             default:
                 ESP_LOGW(TAG, "Unknown key 0x%02x", c);
