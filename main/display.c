@@ -119,8 +119,16 @@ static void display_draw_mode_clock(void) {
     PillTimer_t* next_timer;
     duration_ms_t time_till_next_timer = pill_timer_get_next_to_ring(&next_timer);
     if (next_timer) {
+
         char next_timer_buf[16];
-        format_approx_relative_duration(time_till_next_timer, next_timer_buf, sizeof(next_timer_buf));
+        
+        if (time_till_next_timer == 0 && !next_timer->ringing) {
+            // Special case: This is a relative timer that hasn't had
+            // the first dose yet. Just write that.
+            snprintf(next_timer_buf, sizeof(next_timer_buf), "for first dose");
+        } else {
+            format_approx_relative_duration(time_till_next_timer, next_timer_buf, sizeof(next_timer_buf));
+        }
 
         char dispenser_char = 'A' + next_timer->dispenser_idx;
         snprintf(str_buf, sizeof(str_buf), "%c %s", dispenser_char, next_timer_buf);
@@ -146,7 +154,7 @@ static size_t format_approx_relative_duration(duration_ms_t duration, char* out_
         
         const char* plural_modifier = num_hours > 1 ? "s" : "";
         return snprintf(out_str, len_out_str, "in %" PRId32 " hr%s", num_hours, plural_modifier);
-    } else if (duration > (MS_IN_MINUTE / 2)) {
+    } else if (duration > MS_IN_MINUTE) {
         // Less than 85% of an hour, give nearest minute count
         uint32_t num_mins = duration / MS_IN_MINUTE;
         

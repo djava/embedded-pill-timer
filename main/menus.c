@@ -204,7 +204,7 @@ static void menu_task(void*) {
                             menu_state.rel_num_per_day = REL_NUM_PER_DAY_CONFIG_MAX;
                         }
                     } else if (button == BUTTON_DOWN) {
-                        if (menu_state.rel_num_per_day > 0) {
+                        if (menu_state.rel_num_per_day > 1) {
                             menu_state.rel_num_per_day--;
                         }
                     }
@@ -261,8 +261,8 @@ static void reset_menu_state(void) {
     menu_state.sel_dispenser = PILL_DISPENSER_IDX_A;
     menu_state.sel_mode = PILL_TIMER_MODE_RELATIVE;
     
-    menu_state.rel_num_per_day = 0;
-    menu_state.rel_interval = 0;
+    menu_state.rel_num_per_day = 1;
+    menu_state.rel_interval = 15 * MS_IN_MINUTE;
 
     menu_state.abs_time = 0;
 
@@ -298,7 +298,7 @@ static void update_config_item_has_dirs() {
             break;
         case MENU_TIMER_CONFIG_IDX_REL_NUM_PER_DAY:
             menu_state.config_item_has_up = (menu_state.rel_num_per_day != REL_NUM_PER_DAY_CONFIG_MAX);
-            menu_state.config_item_has_down = (menu_state.rel_num_per_day != 0);
+            menu_state.config_item_has_down = (menu_state.rel_num_per_day >= 1);
             break;
         case MENU_TIMER_CONFIG_IDX_ABS_TIME:
             menu_state.config_item_has_up = (menu_state.abs_time != ABS_TIME_CONFIG_MAX_MS);
