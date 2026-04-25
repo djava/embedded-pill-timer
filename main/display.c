@@ -23,7 +23,7 @@ static TaskHandle_t display_task_handle;
 
 static void display_task(void*);
 static void display_draw_mode_clock(void);
-static size_t format_approx_duration(duration_ms_t duration, char* out_str, size_t len_out_str);
+static size_t format_approx_relative_duration(duration_ms_t duration, char* out_str, size_t len_out_str);
 static void display_draw_mode_menu(void);
 static void display_draw_mode_menu_timer_list(void);
 static void display_draw_mode_menu_config_list(void);
@@ -103,34 +103,39 @@ static void display_draw_mode_clock(void) {
     u8g2_uint_t str_width = u8g2_GetStrWidth(&u8g2, str_buf);
     u8g2_DrawStr(&u8g2,
                  (DISPLAY_WIDTH_PX - str_width) / 2,
-                 30,
+                 20,
+                 str_buf);
+                 
+    u8g2_DrawHLine(&u8g2, (DISPLAY_WIDTH_PX - str_width) / 2, 22, str_width);
+    u8g2_DrawHLine(&u8g2, (DISPLAY_WIDTH_PX - str_width) / 2, 23, str_width);
+    
+    u8g2_SetFont(&u8g2, u8g2_font_7x13_mr);
+    snprintf(str_buf, sizeof(str_buf), "Up Next:");
+    u8g2_DrawStr(&u8g2,
+                 (DISPLAY_WIDTH_PX - u8g2_GetStrWidth(&u8g2, str_buf)) / 2,
+                 38,
                  str_buf);
 
     PillTimer_t* next_timer;
     duration_ms_t time_till_next_timer = pill_timer_get_next_to_ring(&next_timer);
     if (next_timer) {
         char next_timer_buf[8];
-        format_approx_duration(time_till_next_timer, next_timer_buf, sizeof(next_timer_buf));
+        format_approx_relative_duration(time_till_next_timer, next_timer_buf, sizeof(next_timer_buf));
 
         char dispenser_char = 'A' + next_timer->dispenser_idx;
-        snprintf(str_buf, sizeof(str_buf), "Up Next: %c in %s", dispenser_char, next_timer_buf);
+        snprintf(str_buf, sizeof(str_buf), "%c %s", dispenser_char, next_timer_buf);
     } else {
-        snprintf(str_buf, sizeof(str_buf), "Next: None");
+        snprintf(str_buf, sizeof(str_buf), "None");
     }
-
-    u8g2_DrawHLine(&u8g2, (DISPLAY_WIDTH_PX - str_width) / 2, 35, str_width);
-
-    u8g2_SetFont(&u8g2, u8g2_font_7x13_mr);
 
     str_width = u8g2_GetStrWidth(&u8g2, str_buf);
     u8g2_DrawStr(&u8g2,
                  (DISPLAY_WIDTH_PX - str_width) / 2,
-                 50,
+                 55,
                  str_buf);
 }
 
-// Recommended: `len_out_str >= 8`
-static size_t format_approx_duration(duration_ms_t duration, char* out_str, size_t len_out_str) {
+static size_t format_approx_relative_duration(duration_ms_t duration, char* out_str, size_t len_out_str) {
     if (duration > ((MS_IN_HOUR * 85) / 100)) {
         // Duration > 85% of an hour: Round to the nearest hour
         uint32_t num_hours = duration / MS_IN_HOUR;
@@ -140,7 +145,7 @@ static size_t format_approx_duration(duration_ms_t duration, char* out_str, size
         if (rem_ms > (MS_IN_HOUR / 2)) { num_hours++; }
         
         const char* plural_modifier = num_hours > 1 ? "s" : "";
-        return snprintf(out_str, len_out_str, "%" PRId32 " hr%s", num_hours, plural_modifier);
+        return snprintf(out_str, len_out_str, "in %" PRId32 " hr%s", num_hours, plural_modifier);
     } else if (duration > (MS_IN_MINUTE / 2)) {
         // Less than 85% of an hour, give nearest minute count
         uint32_t num_mins = duration / MS_IN_MINUTE;
@@ -150,7 +155,7 @@ static size_t format_approx_duration(duration_ms_t duration, char* out_str, size
         if (rem_ms > (MS_IN_MINUTE / 2)) { num_mins++; }
         
         const char* plural_modifier = num_mins > 1 ? "s" : "";
-        return snprintf(out_str, len_out_str, "%" PRId32 " min%s", num_mins, plural_modifier);
+        return snprintf(out_str, len_out_str, "in %" PRId32 " min%s", num_mins, plural_modifier);
     } else {
         // Less than 30 sec: return as now
         return snprintf(out_str, len_out_str, "Now");
