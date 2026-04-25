@@ -34,6 +34,7 @@ void pill_timer_mgr_init(void);
 void pill_timer_set_absolute(size_t timer, DispenserIdx_t disp, time_in_day_ms_t time_in_day);
 void pill_timer_set_relative(size_t timer, DispenserIdx_t disp, duration_ms_t interval, uint8_t num_per_day);
 void pill_timer_disable(size_t timer);
+const PillTimer_t* pill_timer_get_timer(size_t timer);
 
 duration_ms_t pill_timer_get_next_to_ring(PillTimer_t** out_pt);
 

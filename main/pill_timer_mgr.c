@@ -175,6 +175,10 @@ duration_ms_t pill_timer_get_next_to_ring(PillTimer_t** out_pt) {
     return shortest_time_until;
 }
 
+const PillTimer_t* pill_timer_get_timer(size_t timer) {
+    if (timer >= NUM_PILL_TIMERS) { return NULL; }
+    return &pill_timers[timer];
+}
 
 static void pill_timer_mgr_task(void*) {
     PillTimerEvent_t event;

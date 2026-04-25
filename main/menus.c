@@ -17,9 +17,10 @@ static QueueHandle_t button_queue;
 
 static void menu_task(void*);
 static void button_isr_handler [[gnu::unused]] (void* button_arg);
-static void reset_menu_state();
-static void save_configured_timer();
-static void update_config_item_has_dirs();
+static void reset_menu_state(void);
+static void save_configured_timer(void);
+static void update_config_item_has_dirs(void);
+static void menu_load_pill_timer_config(const PillTimer_t *pt);
 
 void menus_init(void) {
     button_queue = xQueueCreate(BUTTON_QUEUE_LEN, sizeof(ButtonType_t));
@@ -103,7 +104,7 @@ static void menu_task(void*) {
                         menu_state.sel_timer = *timer_idx;
                         menu_state.sel_index.config_idx = 0;
                         menu_state.page = MENU_PAGE_CONFIG_LIST;
-                        // TODO: Load current timer state into menu_state
+                        menu_load_pill_timer_config(pill_timer_get_timer(menu_state.sel_timer));
                     }
                     break;
             }
@@ -305,5 +306,20 @@ static void update_config_item_has_dirs() {
             menu_state.config_item_has_down = true;
             menu_state.config_item_has_up = true;
             break;
+    }
+}
+
+static void menu_load_pill_timer_config(const PillTimer_t *pt) {
+    menu_state.sel_timer_active = pt->active;
+    menu_state.sel_dispenser = pt->dispenser_idx;
+    menu_state.sel_mode = pt->mode;
+    if (pt->mode == PILL_TIMER_MODE_RELATIVE) {
+        menu_state.rel_num_per_day = pt->relative.num_per_day;
+        menu_state.rel_interval = pt->relative.interval;
+        menu_state.abs_time = 0;
+    } else if (pt->mode) {
+        menu_state.abs_time = pt->absolute.time;
+        menu_state.rel_interval = 0;
+        menu_state.rel_num_per_day = 0;
     }
 }
