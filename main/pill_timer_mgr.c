@@ -58,7 +58,12 @@ void pill_timer_mgr_init(void) {
     //                      switch_isr_callback,
     //                      (void*)(PILL_DISPENSER_IDX_B));
 
-    memset(&pill_timers, 0, sizeof(pill_timers));
+    if (flash_load_pill_timers(pill_timers) == false) {
+        memset(&pill_timers, 0, sizeof(pill_timers));
+    }
+
+    // Timer handles are runtime-only and must not be persisted across reboots —
+    // recreate every boot regardless of whether state was restored from flash.
     for (size_t i = 0; i < NUM_PILL_TIMERS; i++) {
         PillTimer_t* pt = &pill_timers[i];
         pt->timeout_timer_handle = xTimerCreate("Timeout",
@@ -105,7 +110,7 @@ void pill_timer_set_absolute(size_t timer, DispenserIdx_t disp, time_in_day_ms_t
 
     pill_timers[timer].absolute.today_timer_happened = false;
 
-    // TODO: Save to NVM
+    flash_save_pill_timers(pill_timers);
 
     xSemaphoreGive(pill_timer_mutex);
 }
@@ -124,7 +129,7 @@ void pill_timer_set_relative(size_t timer, DispenserIdx_t disp, duration_ms_t in
     pill_timers[timer].relative.today_num_times_rang = 0;
     pill_timers[timer].relative.today_time_last_rang = UINT32_MAX;
 
-    // TODO: Save to NVM
+    flash_save_pill_timers(pill_timers);
 
     xSemaphoreGive(pill_timer_mutex);
 }
@@ -135,7 +140,7 @@ void pill_timer_disable(size_t timer) {
     pill_timers[timer].active = false;
     pill_timers[timer].ringing = false;
 
-    // TODO: Save to NVM
+    flash_save_pill_timers(pill_timers);
 
     xSemaphoreGive(pill_timer_mutex);
 }
